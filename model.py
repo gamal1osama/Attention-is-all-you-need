@@ -23,18 +23,18 @@ class PositionalEncoding(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         # Create a matrix of shape (seq_len, d_model)
-        self.pe = torch.zeros(self.max_seq_len, self.d_model)
+        pe = torch.zeros(self.max_seq_len, self.d_model)
 
         positions = torch.arange(0, max_seq_len, dtype=torch.float).unsqueeze(1)
 
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(1000.0) / d_model))
 
-        self.pe[:, 0::2] = torch.sin(positions * div_term)
-        self.pe[:, 1::2] = torch.cos(positions * div_term)
+        pe[:, 0::2] = torch.sin(positions * div_term)
+        pe[:, 1::2] = torch.cos(positions * div_term)
 
-        self.pe = self.pe.unsqueeze(0) # (1, max_seq_len, d_model)
+        pe = pe.unsqueeze(0) # (1, max_seq_len, d_model)
 
-        self.register_buffer('pe', self.pe)
+        self.register_buffer('pe', pe)
 
     def forward(self, x):
         x = x + (self.pe[:, :x.shape[1], :]).requires_grad_(False)
@@ -46,8 +46,8 @@ class LayerNormalization(nn.Module):
     def __init__(self, eps: float = 10**-6) -> None:
         super().__init__()
         self.eps = eps
-        self.alpha = nn.parameter(torch.ones(1)) # multiplied
-        self.bias = nn.parameter(torch.ones(0)) # added
+        self.alpha = nn.Parameter(torch.ones(1)) # multiplied
+        self.bias = nn.Parameter(torch.zeros(1)) # added
 
     def forward(self, x):
         mean = x.mean(dim=-1, keepdim=True)
@@ -74,7 +74,7 @@ class MultiHeadAttention(nn.Module):
         super().__init__()
         self.d_model = d_model
         self.h = h
-        assert d_model % h
+        assert d_model % h == 0
 
         self.d_k = d_model // h
         
