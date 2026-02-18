@@ -4,9 +4,9 @@ from torch.utils.data import random_split, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import torchmetrics
 
-from config import get_weights_file_path, get_config
-from dataset import BilingualDataset, causal_mask
-from model import build_transformer
+from src.config import get_weights_file_path, get_config
+from src.dataset import BilingualDataset, causal_mask
+from src.model import build_transformer
 
 from datasets import load_dataset
 from tokenizers import Tokenizer
@@ -25,6 +25,7 @@ def get_all_sentences(ds, lang):
 
 def get_or_build_tokenizer(config, ds, lang):
     tokenizer_path = Path(config['tokenizer_file'].format(lang))
+    tokenizer_path.parent.mkdir(parents=True, exist_ok=True)
     if not Path.exists(tokenizer_path):
         tokenizer = Tokenizer(WordLevel(unk_token="[UNK]"))
         tokenizer.pre_tokenizer = Whitespace()
@@ -68,9 +69,8 @@ def get_ds(config):
     return train_dataloader, val_dataloader, src_tokenizer, tgt_tokenizer
 
 
-
 def get_model(config, vocab_src_len, vocab_tgt_len):
-    model = build_transformer(vocab_src_len, vocab_tgt_len, config['seq_len'], config['seq_len'], config['d_model'])    
+    model = build_transformer(vocab_src_len, vocab_tgt_len, config['seq_len'], config['seq_len'], config['d_model'])
     return model
 
 
@@ -150,8 +150,7 @@ def validate(model, val_dataloader, tgt_tokenizer, max_len, device, print_msg, g
                 break
 
     if writer:
-        # Evaluate the character error rate
-        # Compute the char error rate 
+        # Compute the char error rate
         metric = torchmetrics.CharErrorRate()
         cer = metric(predicted, expected)
         writer.add_scalar('validation cer', cer, global_step)
@@ -183,7 +182,6 @@ def train_model(config):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config['lr'], eps=1e-9)
 
-
     initial_epoch = 0
     global_step = 0
 
@@ -206,15 +204,15 @@ def train_model(config):
         batch_iterator = tqdm(train_dataloader, desc=f'Processing Epoch {epoch:02d}')
 
         for batch in batch_iterator:
-            enc_input = batch['encoder_input'].to(device) # (B, Seq_len)
-            dec_input = batch['decoder_input'].to(device) # (B, Seq_len)
-            enc_mask = batch['encoder_mask'].to(device) # (B, 1, 1, Seq_len)
-            dec_mask = batch['decoder_mask'].to(device) # (B, 1, Seq_len, Seq_len)
-            labels = batch['labels'].to(device) # (B, Seq_len)
+            enc_input = batch['encoder_input'].to(device)  # (B, Seq_len)
+            dec_input = batch['decoder_input'].to(device)  # (B, Seq_len)
+            enc_mask = batch['encoder_mask'].to(device)    # (B, 1, 1, Seq_len)
+            dec_mask = batch['decoder_mask'].to(device)    # (B, 1, Seq_len, Seq_len)
+            labels = batch['labels'].to(device)            # (B, Seq_len)
 
-            enc_output = model.encode(enc_input, enc_mask) # (B, Seq_len, D_model)
-            dec_output = model.decode(dec_input, enc_output, enc_mask, dec_mask) # (B, Seq_len, D_model)
-            projected_output = model.project(dec_output) # (B, Seq_len, Vocab_tgt_len)
+            enc_output = model.encode(enc_input, enc_mask)         # (B, Seq_len, D_model)
+            dec_output = model.decode(dec_input, enc_output, enc_mask, dec_mask)  # (B, Seq_len, D_model)
+            projected_output = model.project(dec_output)           # (B, Seq_len, Vocab_tgt_len)
 
             # (B, Seq_len, Vocab_tgt_len) -> (B * Seq_len, Vocab_tgt_len)
             loss = loss_fn(projected_output.view(-1, tgt_tokenizer.get_vocab_size()), labels.view(-1))
@@ -231,7 +229,6 @@ def train_model(config):
 
             global_step += 1
 
-        
         # Run validation at the end of each epoch
         validate(model, val_dataloader, tgt_tokenizer, config['seq_len'], device,
                  lambda msg: batch_iterator.write(msg), global_step, writer)

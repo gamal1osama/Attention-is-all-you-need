@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
-from traitlets import Any
+from typing import Any
 
 
 class BilingualDataset(Dataset):
@@ -22,7 +22,6 @@ class BilingualDataset(Dataset):
         self.sos_token = torch.tensor([tgt_tokenizer.token_to_id("[SOS]")], dtype=torch.int64)
         self.eos_token = torch.tensor([tgt_tokenizer.token_to_id("[EOS]")], dtype=torch.int64)
         self.pad_token = torch.tensor([tgt_tokenizer.token_to_id("[PAD]")], dtype=torch.int64)
-
 
     def __len__(self):
         return len(self.ds)
@@ -72,19 +71,16 @@ class BilingualDataset(Dataset):
         assert labels.shape[0] == self.seq_len, f"Labels length {labels.shape[0]} does not match expected sequence length {self.seq_len}"
         
         return {
-            "encoder_input": encoder_input, # shape: (seq_len,)
-            "decoder_input": decoder_input, # shape: (seq_len,)
-            
-            "encoder_mask": (encoder_input != self.pad_token).unsqueeze(0).unsqueeze(0).int(), # shape: (1, 1, seq_len)
-            "decoder_mask": (decoder_input != self.pad_token).unsqueeze(0).unsqueeze(0).int() & causal_mask(decoder_input.shape[0]), # shape: (1, seq_len) & (1, 1, seq_len)
-        
-            "labels": labels, # shape: (seq_len,)
-
+            "encoder_input": encoder_input,  # shape: (seq_len,)
+            "decoder_input": decoder_input,  # shape: (seq_len,)
+            "encoder_mask": (encoder_input != self.pad_token).unsqueeze(0).unsqueeze(0).int(),  # shape: (1, 1, seq_len)
+            "decoder_mask": (decoder_input != self.pad_token).unsqueeze(0).unsqueeze(0).int() & causal_mask(decoder_input.shape[0]),  # shape: (1, seq_len) & (1, 1, seq_len)
+            "labels": labels,  # shape: (seq_len,)
             "src_text": src_text,
             "tgt_text": tgt_text
         }
     
 
 def causal_mask(seq_len):
-    mask = torch.triu(torch.ones(1, seq_len, seq_len), diagonal=1).type(torch.int64) # shape: (1, seq_len, seq_len)
-    return mask==0 # shape: (1, seq_len, seq_len)
+    mask = torch.triu(torch.ones(1, seq_len, seq_len), diagonal=1).type(torch.int64)  # shape: (1, seq_len, seq_len)
+    return mask == 0  # shape: (1, seq_len, seq_len)

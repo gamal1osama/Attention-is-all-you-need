@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import math
 
+
 class InputEmbeddings(nn.Module):
 
     def __init__(self, d_model: int, vocab_size: int):
@@ -11,7 +12,7 @@ class InputEmbeddings(nn.Module):
         self.embedding = nn.Embedding(vocab_size, d_model)
 
     def forward(self, x):
-        return self.embedding(x) * math.sqrt(self.d_model) # the scaling factor
+        return self.embedding(x) * math.sqrt(self.d_model)  # the scaling factor
     
 
 class PositionalEncoding(nn.Module):
@@ -28,11 +29,11 @@ class PositionalEncoding(nn.Module):
         positions = torch.arange(0, max_seq_len, dtype=torch.float).unsqueeze(1)
 
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(1000.0) / d_model))
-
+        
         pe[:, 0::2] = torch.sin(positions * div_term)
         pe[:, 1::2] = torch.cos(positions * div_term)
 
-        pe = pe.unsqueeze(0) # (1, max_seq_len, d_model)
+        pe = pe.unsqueeze(0)  # (1, max_seq_len, d_model)
 
         self.register_buffer('pe', pe)
 
@@ -46,14 +47,14 @@ class LayerNormalization(nn.Module):
     def __init__(self, eps: float = 10**-6) -> None:
         super().__init__()
         self.eps = eps
-        self.alpha = nn.Parameter(torch.ones(1)) # multiplied
-        self.bias = nn.Parameter(torch.zeros(1)) # added
+        self.alpha = nn.Parameter(torch.ones(1))   # multiplied
+        self.bias = nn.Parameter(torch.zeros(1))   # added
 
     def forward(self, x):
         mean = x.mean(dim=-1, keepdim=True)
         std = x.std(dim=-1, keepdim=True)
 
-        return self.alpha * (x-mean) / (std + self.eps) + self.bias
+        return self.alpha * (x - mean) / (std + self.eps) + self.bias
     
 
 class FeedForwardBlock(nn.Module):
@@ -94,12 +95,11 @@ class MultiHeadAttention(nn.Module):
 
         if mask is not None:
             attention_scores.masked_fill_(mask == 0, -1e9)
-            # attention_scores = attention_scores.masked_fill(mask == 0, -1e9)
             '''
             Action: replaces attention scores at positions where mask==0 with a very large negative number (−1e9).
             Why: after this you call softmax on attn_scores; values ≈ −1e9 become effectively 0 probability, so those positions get (almost) no attention.
             '''
-        attention_scores = attention_scores.softmax(dim = -1)
+        attention_scores = attention_scores.softmax(dim=-1)
 
         if dropout is not None:         
             attention_scores = dropout(attention_scores)
@@ -114,9 +114,9 @@ class MultiHeadAttention(nn.Module):
         query = query.view(query.shape[0], query.shape[1], self.h, self.d_k).transpose(1, 2)
         key = key.view(key.shape[0], key.shape[1], self.h, self.d_k).transpose(1, 2)
         value = value.view(value.shape[0], value.shape[1], self.h, self.d_k).transpose(1, 2)
-
+        
         x, self.attention_scores = MultiHeadAttention.attention(query, key, value, mask, self.dropout)
-
+        
         x = x.transpose(1, 2).contiguous().view(x.shape[0], -1, self.h * self.d_k)
         return self.w_o(x)
     
@@ -197,6 +197,7 @@ class ProjectionLayer(nn.Module):
     def forward(self, x):
         return torch.log_softmax(self.projection(x), dim=-1)
     
+
 class Transformer(nn.Module):
 
     def __init__(self, encoder: Encoder, decoder: Decoder, src_embed: InputEmbeddings, tgt_embed: InputEmbeddings, src_pos: PositionalEncoding, tgt_pos: PositionalEncoding, projection_layer: ProjectionLayer) -> None:
@@ -223,8 +224,7 @@ class Transformer(nn.Module):
         return self.projection_layer(decoder_output)
 
 
-
-def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len: int, tgt_seq_len: int, d_model: int=512, N: int=6, h: int=8, dropout: float=0.1, d_ff: int=2048) -> Transformer:
+def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len: int, tgt_seq_len: int, d_model: int = 512, N: int = 6, h: int = 8, dropout: float = 0.1, d_ff: int = 2048) -> Transformer:
     
     src_embed = InputEmbeddings(d_model, src_vocab_size)
     tgt_embed = InputEmbeddings(d_model, tgt_vocab_size)
@@ -239,7 +239,6 @@ def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len: int
         encoder_block = EncoderBlock(self_attention_block, feed_forward_block, dropout)
         encoder_layers.append(encoder_block)
 
-
     decoder_layers = []
     for _ in range(N):
         self_attention_block = MultiHeadAttention(d_model, h, dropout)
@@ -248,7 +247,6 @@ def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len: int
         decoder_block = DecoderBlock(self_attention_block, cross_attention_block, feed_forward_block, dropout)
         decoder_layers.append(decoder_block)
 
-    
     encoder = Encoder(nn.ModuleList(encoder_layers))
     decoder = Decoder(nn.ModuleList(decoder_layers))
 
@@ -256,11 +254,9 @@ def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len: int
 
     transformer = Transformer(encoder, decoder, src_embed, tgt_embed, src_pos, tgt_pos, projection_layer)
 
-
     # Initialize parameters
     for p in transformer.parameters():
         if p.dim() > 1:
             nn.init.xavier_uniform_(p)
 
     return transformer
-    

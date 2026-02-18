@@ -9,13 +9,12 @@ def get_config():
         'd_model': 512,
         'lang_src': 'en',
         'lang_tgt': 'it',
-        'model_folder': 'weights',
+        'model_folder': 'data/weights',
         'model_basename': 'tmodel_',
         'preload': None,
-        'tokenizer_file': './tokenizer_{0}.json',
+        'tokenizer_file': 'data/tokenizers/tokenizer_{0}.json',
         'experiment_name': 'runs/tmodel'
     }
-
 
 
 def get_weights_file_path(config, epoch: str):
@@ -26,7 +25,7 @@ def get_weights_file_path(config, epoch: str):
     return str(Path('.') / model_folder / model_filename)
 
 def latest_weights_file_path(config):
-    model_folder = f"{config['datasource']}_{config['model_folder']}"
+    model_folder = f"{config['model_folder']}"
     model_filename = f"{config['model_basename']}*"
     weights_files = list(Path(model_folder).glob(model_filename))
     if len(weights_files) == 0:

@@ -13,13 +13,23 @@ This project implements the Transformer architecture for machine translation, in
 ## Project Structure
 ```
 attention is all u need/
-├── attention is all u need.pdf # Original paper
-├── config.py          # Configuration file
-├── dataset.py         # Bilingual dataset class
-├── model.py           # Transformer model components
-├── train.py           # Training script
-├── train_colab.ipynb  # Colab notebook for end-to-end training
-├── requirements.txt   # Project dependencies
+├── src/
+│   ├── __init__.py
+│   ├── config.py          # Configuration & path helpers
+│   ├── dataset.py         # Bilingual dataset class & causal mask
+│   ├── model.py           # Transformer model components
+│   └── train.py           # Training, validation & inference
+├── data/
+│   ├── tokenizers/
+│   │   ├── tokenizer_en.json
+│   │   └── tokenizer_it.json
+│   ├── weights/           # Model checkpoints (excluded from git)
+│   └── raw/               # Raw dataset cache
+├── attention is all u need.pdf  # Original paper
+├── train_colab.ipynb      # Colab notebook for end-to-end training
+├── requirements.txt       # Project dependencies
+├── .gitignore
+└── README.md
 ```
 
 ## Setup
@@ -54,9 +64,9 @@ git add .gitattributes
 
 ## Usage
 ### Training
-Run the training script:
+Run the training script from the project root:
 ```bash
-python train.py
+python -m src.train
 ```
 Or use the Colab notebook for interactive training:
 - Open `train_colab.ipynb` in Google Colab
